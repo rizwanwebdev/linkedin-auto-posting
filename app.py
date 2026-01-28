@@ -3,9 +3,10 @@ import json
 import time
 import random
 import requests
+from flask import Flask
 from apscheduler.schedulers.background import BackgroundScheduler
 from groq import Groq
-
+from flask import Flask
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -23,6 +24,9 @@ GROQ_API_KEY= os.getenv("GROQ_API_KEY")
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 # =========================================
+
+
+app = Flask(__name__)
 
 # ---------- GLOBAL VERIFIED STATE ----------
 sheet = None
@@ -53,6 +57,7 @@ def verify_google_sheet():
 
     # sanity check
     sheet.get_all_records()
+    print("✅ Google Sheet verified")
 
 
 
@@ -166,10 +171,12 @@ def job():
         return
 
     post_text = generate_post(row["AI Prompt"])
+    print(post_text)
     post_to_linkedin(post_text)
 
     # ✅ Wrap value in list of lists
     sheet.update(f"C{row_number}", [["Posted"]])
+    print("✅ Posted and sheet updated")
     
     
 # ========== KEEP ALIVE ==========
@@ -191,9 +198,14 @@ def startup():
     scheduler.start()
     scheduler.add_job(job, "interval", hours=4)
 
+    print("🚀 Scheduler running")
 
+
+@app.route("/")
+def home():
+    return "Alive"
 
 
 if __name__ == "__main__":
     startup()
-    time.sleep(60)  # keep the script alive for APScheduler
+    app.run(host="0.0.0.0", port=10000)
